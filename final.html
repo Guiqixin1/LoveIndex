@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<style>
+    html, body {
+    position: relative;
+      height: 100%;
+      padding: 0;
+      margin: 0;
+      background: #000;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+    }
+    #pinkboard{
+        position: absolute;
+    }
+    /* img{
+      top: 100px;
+      left: 500px;
+      position: absolute;
+      width: 300px;
+      height: 200px;
+    } */
+    h1{
+      position: absolute;
+      /* text-align: center; */
+      top: 85%;
+      left: 40%;
+    }
+    </style>
+<body>
+    <div style="text-align:center;clear:both;">
+        <script src="/gg_bd_ad_720x90.js" type="text/javascript"></script>
+        <script src="/follow.js" type="text/javascript"></script>
+     </div>
+     <!-- <img src="./微信图片_20230923143826.jpg" alt=""> -->
+     <canvas id="pinkboard"></canvas>
+    <canvas id='canvafirework'> </canvas>
+        
+</body>
+
+<script>
+var canvafirework = document.getElementById('canvafirework');
+	    canvafirework.width=document.documentElement.clientWidth;
+    	canvafirework.height=document.documentElement.clientHeight;
+	var ctx = canvafirework.getContext("2d");	
+ 
+	var arr=[];//存取烟花的数组
+	var list=[];//存取碎片的数组
+	
+	//定义烟花
+	function Fire(){
+		this.x=canvafirework.width/2,//烟花的x坐标
+		this.y=canvafirework.height,//烟花的y坐标
+		this.radius=2,//烟花的半径
+		this.speed=getRandom(8,12),//运行的速度
+		this.angle=getRandom(1.1*Math.PI,1.9 * Math.PI),//发射的范围
+		//this.color='white';//颜色
+		this.color=Math.random()>0.5 ? 'white' : ('#' + Math.random().toString(16).substr(2, 6).toUpperCase());
+	}
+	Fire.prototype.draw=function(){
+		ctx.beginPath();
+		ctx.arc(this.x,this.y,this.radius,0,2*Math.PI);//画圆
+		ctx.fillStyle=this.color;
+		ctx.fill();
+		ctx.closePath();
+	}
+	//爆炸后重置烟花的位置、速度等参数，以便再次发射
+	Fire.prototype.restore=function(){
+		this.x=canvafirework.width/2;
+		this.y=canvafirework.height;
+		this.speed=getRandom(40,160);
+		this.angle=getRandom(1.1*Math.PI,1.9 * Math.PI);
+	}
+	
+	Fire.prototype.update=function(){
+		//更新X坐标
+		this.x+=Math.cos(this.angle)*this.speed;
+		//更新Y坐标
+		this.y+=Math.sin(this.angle)*this.speed;
+		//控制飞行的最大位置
+		if(this.y<canvafirework.height*0.2 || this.x<canvafirework.width*0.1 || this.x>canvafirework.width*0.9){
+			//达到最大位置后
+			buildChildFire(this);//生成烟花碎片
+			this.restore();//将烟花重置
+		}
+	}
+	//定义烟花碎片
+	function ChildFire(){
+		this.x=0,//烟花碎片x位置
+		this.y=0,//烟花碎片y位置
+		this.radius=1,//烟花碎片半径
+		this.n=1,//烟花碎片次数
+		this.speed=getRandom(1,10)/5,//烟花碎片速度
+		this.g=0.98,//重力
+		this.mocha=0.96,//摩擦力
+		//this.color='#' + Math.random().toString(16).substr(2, 6).toUpperCase(),
+		
+		//一半是白色的碎片，一半是五颜六色的碎片
+		this.color=Math.random()>0.5 ? 'white' : ('#' + Math.random().toString(16).substr(2, 6).toUpperCase()),
+		//碎片的角度
+		this.angle=getRandom(0,2 * Math.PI);//0-2π之间随机，这样就各个方向都有了
+	}
+	//绘制碎片
+	ChildFire.prototype.draw=function(){
+		ctx.beginPath();
+		ctx.arc(this.x,this.y,this.radius,0,2*Math.PI);
+		ctx.fillStyle=this.color;
+		ctx.fill();
+		ctx.closePath();
+	}
+	ChildFire.prototype.update=function(index){
+		//更新X坐标
+		this.x+=Math.cos(this.angle)*this.speed*this.mocha;
+		//更新Y坐标
+		this.y+=Math.sin(this.angle)*this.speed*this.mocha*this.g;
+		
+		//执行一次加1
+		this.n++;
+		//50次后清除烟花碎片
+		if(this.n>=50){
+			//清除当前碎片的动画函数
+			window.cancelAnimationFrame(this.raf);
+			//清除当前烟花碎片，否则会导致卡死
+			list.splice(index,1);
+		}else{
+			this.raf = window.requestAnimationFrame(this.draw);
+		}
+	}
+	
+	//创建烟花对象(这里默认2个，多了可能会卡)
+	var fire = new Fire();
+	arr.push(fire);
+	var fire2 = new Fire();
+	arr.push(fire2);
+	
+	//清洗画布
+	function clear() {
+	   ctx.fillStyle = 'rgba(0,0,0,0.3)';
+	   ctx.fillRect(0,0,canvafirework.width,canvafirework.height);
+	}
+	//创建碎片
+	function buildChildFire(fire){
+		for(var i=0;i<400;i++){
+			var cFire =	new ChildFire();
+			//定义烟花碎片的x、y轴位置
+			cFire.x=fire.x;
+			cFire.y=fire.y;
+			list.push(cFire);
+		}
+	}
+	
+	function draw(){
+		clear();
+		//循环存烟花碎片数组
+		list.forEach(function(c,i){
+			c.draw();
+			c.update(i);
+		})
+		//循环存烟花数组
+		arr.forEach(function(c,i){
+				c.draw();
+				c.update();
+		})
+		window.requestAnimationFrame(draw);
+	}
+	//获取一定范围内的随机数
+	function getRandom(min, max) {
+	  return Math.random() * (max - min) + min;
+	}
+	//执行动画函数
+	window.requestAnimationFrame(draw)
+
+
+
+    // 爱心
+    var settings = {
+  particles: {
+    length:   500,
+    duration:   2,
+    velocity: 100,
+    effect: -0.75,
+    size:      30,
+  },
+};
+
+(function(){var b=0;var c=["ms","moz","webkit","o"];for(var a=0;a<c.length&&!window.requestAnimationFrame;++a){window.requestAnimationFrame=window[c[a]+"RequestAnimationFrame"];window.cancelAnimationFrame=window[c[a]+"CancelAnimationFrame"]||window[c[a]+"CancelRequestAnimationFrame"]}if(!window.requestAnimationFrame){window.requestAnimationFrame=function(h,e){var d=new Date().getTime();var f=Math.max(0,16-(d-b));var g=window.setTimeout(function(){h(d+f)},f);b=d+f;return g}}if(!window.cancelAnimationFrame){window.cancelAnimationFrame=function(d){clearTimeout(d)}}}());
+
+var Point = (function() {
+  function Point(x, y) {
+    this.x = (typeof x !== 'undefined') ? x : 0;
+    this.y = (typeof y !== 'undefined') ? y : 0;
+  }
+  Point.prototype.clone = function() {
+    return new Point(this.x, this.y);
+  };
+  Point.prototype.length = function(length) {
+    if (typeof length == 'undefined')
+      return Math.sqrt(this.x * this.x + this.y * this.y);
+    this.normalize();
+    this.x *= length;
+    this.y *= length;
+    return this;
+  };
+  Point.prototype.normalize = function() {
+    var length = this.length();
+    this.x /= length;
+    this.y /= length;
+    return this;
+  };
+  return Point;
+})();
+
+var Particle = (function() {
+  function Particle() {
+    this.position = new Point();
+    this.velocity = new Point();
+    this.acceleration = new Point();
+    this.age = 0;
+  }
+  Particle.prototype.initialize = function(x, y, dx, dy) {
+    this.position.x = x;
+    this.position.y = y;
+    this.velocity.x = dx;
+    this.velocity.y = dy;
+    this.acceleration.x = dx * settings.particles.effect;
+    this.acceleration.y = dy * settings.particles.effect;
+    this.age = 0;
+  };
+  Particle.prototype.update = function(deltaTime) {
+    this.position.x += this.velocity.x * deltaTime;
+    this.position.y += this.velocity.y * deltaTime;
+    this.velocity.x += this.acceleration.x * deltaTime;
+    this.velocity.y += this.acceleration.y * deltaTime;
+    this.age += deltaTime;
+  };
+  Particle.prototype.draw = function(context, image) {
+    function ease(t) {
+      return (--t) * t * t + 1;
+    }
+    var size = image.width * ease(this.age / settings.particles.duration);
+    context.globalAlpha = 1 - this.age / settings.particles.duration;
+    context.drawImage(image, this.position.x - size / 2, this.position.y - size / 2, size, size);
+  };
+  return Particle;
+})();
+
+var ParticlePool = (function() {
+  var particles,
+      firstActive = 0,
+      firstFree   = 0,
+      duration    = settings.particles.duration;
+  
+  function ParticlePool(length) {
+    particles = new Array(length);
+    for (var i = 0; i < particles.length; i++)
+      particles[i] = new Particle();
+  }
+  ParticlePool.prototype.add = function(x, y, dx, dy) {
+    particles[firstFree].initialize(x, y, dx, dy);
+    
+    firstFree++;
+    if (firstFree   == particles.length) firstFree   = 0;
+    if (firstActive == firstFree       ) firstActive++;
+    if (firstActive == particles.length) firstActive = 0;
+  };
+  ParticlePool.prototype.update = function(deltaTime) {
+    var i;
+    
+    if (firstActive < firstFree) {
+      for (i = firstActive; i < firstFree; i++)
+        particles[i].update(deltaTime);
+    }
+    if (firstFree < firstActive) {
+      for (i = firstActive; i < particles.length; i++)
+        particles[i].update(deltaTime);
+      for (i = 0; i < firstFree; i++)
+        particles[i].update(deltaTime);
+    }
+    
+    while (particles[firstActive].age >= duration && firstActive != firstFree) {
+      firstActive++;
+      if (firstActive == particles.length) firstActive = 0;
+    }
+    
+    
+  };
+  ParticlePool.prototype.draw = function(context, image) {
+    if (firstActive < firstFree) {
+      for (i = firstActive; i < firstFree; i++)
+        particles[i].draw(context, image);
+    }
+    if (firstFree < firstActive) {
+      for (i = firstActive; i < particles.length; i++)
+        particles[i].draw(context, image);
+      for (i = 0; i < firstFree; i++)
+        particles[i].draw(context, image);
+    }
+  };
+  return ParticlePool;
+})();
+
+(function(canvas) {
+  var context = canvas.getContext('2d'),
+      particles = new ParticlePool(settings.particles.length),
+      particleRate = settings.particles.length / settings.particles.duration, // particles/sec
+      time;
+  
+  function pointOnHeart(t) {
+    return new Point(
+      160 * Math.pow(Math.sin(t), 3),
+      130 * Math.cos(t) - 50 * Math.cos(2 * t) - 20 * Math.cos(3 * t) - 10 * Math.cos(4 * t) + 25
+    );
+  }
+  
+  var image = (function() {
+    var canvas  = document.createElement('canvas'),
+        context = canvas.getContext('2d');
+    canvas.width  = settings.particles.size;
+    canvas.height = settings.particles.size;
+    function to(t) {
+      var point = pointOnHeart(t);
+      point.x = settings.particles.size / 2 + point.x * settings.particles.size / 350;
+      point.y = settings.particles.size / 2 - point.y * settings.particles.size / 350;
+      return point;
+    }
+    context.beginPath();
+    var t = -Math.PI;
+    var point = to(t);
+    context.moveTo(point.x, point.y);
+    while (t < Math.PI) {
+      t += 0.01; 
+      point = to(t);
+      context.lineTo(point.x, point.y);
+    }
+    context.closePath();
+    context.fillStyle = '#ea80b0';
+    context.fill();
+  
+    var image = new Image();
+    image.src = canvas.toDataURL();
+    return image;
+  })();
+  
+  function render() {
+    requestAnimationFrame(render);
+    
+    var newTime   = new Date().getTime() / 1000,
+        deltaTime = newTime - (time || newTime);
+    time = newTime;
+    
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    
+    var amount = particleRate * deltaTime;
+    for (var i = 0; i < amount; i++) {
+      var pos = pointOnHeart(Math.PI - 2 * Math.PI * Math.random());
+      var dir = pos.clone().length(settings.particles.velocity);
+      particles.add(canvas.width / 2 + pos.x, canvas.height / 2 - pos.y, dir.x, -dir.y);
+    }
+    
+    particles.update(deltaTime);
+    particles.draw(context, image);
+  }
+  
+  function onResize() {
+    canvas.width  = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+  }
+  window.onresize = onResize;
+  
+  setTimeout(function() {
+    onResize();
+    render();
+  }, 10);
+})(document.getElementById('pinkboard'));
+</script>
+</html>
